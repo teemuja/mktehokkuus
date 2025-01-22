@@ -1,7 +1,7 @@
 streamlit
+pandas
+geopandas
 h3
-osmnx
-momepy
 boto3
 duckdb
 geocoder
