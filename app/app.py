@@ -294,23 +294,24 @@ def generate_den_graphs(den0,den1):
     
     def plot_muutos(df1, df2):
 
-        fig = go.Figure(layout=go.Layout(
-            title=go.layout.Title(
-                text=f"Luokan '{value_title}' tiheys (~km² mediaani) & väestömäärä etäisyysvyöhykkeillä"),
-            yaxis=dict(
-                title="Tiheys (~km² mediaani)", 
-                titlefont=dict(color="black"),
-                tickfont=dict(color="black"),
-                side="left",
-            ),
-            yaxis2=dict(
-                title="Väestömäärä etäisyysvyöhykkeellä",
-                titlefont=dict(color="black"),
-                tickfont=dict(color="black"),
-                overlaying="y",
-                side="right",
+        fig = go.Figure(
+            layout=dict(
+                title=f"Luokan '{value_title}' tiheys (~km² mediaani) & väestömäärä etäisyysvyöhykkeillä",
+                yaxis=dict(
+                    title="Tiheys (~km² mediaani)", 
+                    titlefont=dict(color="black"),
+                    tickfont=dict(color="black"),
+                    side="left",
+                ),
+                yaxis2=dict(
+                    title="Väestömäärä etäisyysvyöhykkeellä",
+                    titlefont=dict(color="black"),
+                    tickfont=dict(color="black"),
+                    overlaying="y",
+                    side="right",
+                )
             )
-        ))
+        )
 
         # Density (left y-axis)
         fig.add_trace(go.Scatter(x=df1['ring'], y=df1['pop_median_5km2'], name=f'{vuodet[0]} (Tiheys)',
