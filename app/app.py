@@ -298,15 +298,11 @@ def generate_den_graphs(den0,den1):
             layout=dict(
                 title=f"Luokan '{value_title}' tiheys (~km² mediaani) & väestömäärä etäisyysvyöhykkeillä",
                 yaxis=dict(
-                    title="Tiheys (~km² mediaani)", 
-                    titlefont=dict(color="black"),
-                    tickfont=dict(color="black"),
+                    title="Tiheys (~km² mediaani)",
                     side="left",
                 ),
                 yaxis2=dict(
                     title="Väestömäärä etäisyysvyöhykkeellä",
-                    titlefont=dict(color="black"),
-                    tickfont=dict(color="black"),
                     overlaying="y",
                     side="right",
                 )
