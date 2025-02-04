@@ -285,44 +285,75 @@ def den_grad(df_in,center_add,value,reso=8,rings=7):
 den0 = den_grad(df_in=plot,center_add=valinnat[0],value=f'{vuodet[0]}_{graph_value}',reso=8,rings=16)
 den1 = den_grad(df_in=plot,center_add=valinnat[0],value=f'{vuodet[1]}_{graph_value}',reso=8,rings=16)
 
+den0['pop_per_ring'] = den0['pop_sum_ring'].diff().fillna(den0['pop_sum_ring'])
+den1['pop_per_ring'] = den1['pop_sum_ring'].diff().fillna(den1['pop_sum_ring'])
 
 # graph plotter
 import plotly.graph_objects as go
 def generate_den_graphs(den0,den1):
-    # 
-    def plot_muutos(df1,df2):
-        fig = go.Figure(layout=go.Layout(title=go.layout.Title(text=f"Luokan '{value_title}' tiheyden(~km² mediaani) muutos keskustaetäisyyden mukaan")))
-        fig.add_trace(go.Scatter(x=df1['ring'],y=df1['pop_median_5km2'],name=f'{vuodet[0]}',
-                                fill='tozeroy',fillcolor='rgba(222, 184, 135, 0.5)',
-                                mode='lines', line=dict(width=0.5, color='rgb(0, 0, 0)')))
-        fig.add_trace(go.Scatter(x=df2['ring'],y=df2['pop_median_5km2'],name=f'{vuodet[1]}',
-                                fill='tonexty',fillcolor='rgba(205, 127, 50, 0.5)', mode='none'))
-        fig.update_xaxes(range=[1,15])
+    
+    def plot_muutos(df1, df2):
+
+        fig = go.Figure(layout=go.Layout(
+            title=go.layout.Title(
+                text=f"Luokan '{value_title}' tiheys (~km² mediaani) & väestömäärä etäisyysvyöhykkeillä"),
+            yaxis=dict(
+                title="Tiheys (~km² mediaani)", 
+                titlefont=dict(color="black"),
+                tickfont=dict(color="black"),
+                side="left",
+            ),
+            yaxis2=dict(
+                title="Väestömäärä etäisyysvyöhykkeellä",
+                titlefont=dict(color="black"),
+                tickfont=dict(color="black"),
+                overlaying="y",
+                side="right",
+            )
+        ))
+
+        # Density (left y-axis)
+        fig.add_trace(go.Scatter(x=df1['ring'], y=df1['pop_median_5km2'], name=f'{vuodet[0]} (Tiheys)',
+                                fill='tozeroy', fillcolor='rgba(222, 184, 135, 0.5)',
+                                mode='lines', line=dict(width=0.5, color='black'),
+                                yaxis="y1"))
+
+        fig.add_trace(go.Scatter(x=df2['ring'], y=df2['pop_median_5km2'], name=f'{vuodet[1]} (Tiheys)',
+                                fill='tonexty', fillcolor='rgba(205, 127, 50, 0.5)',
+                                mode='none', yaxis="y1"))
+
+        # Total Population (right y-axis)
+        fig.add_trace(go.Scatter(x=df1['ring'], y=df1['pop_per_ring'], name=f'{vuodet[0]} (Väestömäärä)',
+                                mode='lines', line=dict(width=1.5, color='grey'),
+                                yaxis="y2"))
+
+        fig.add_trace(go.Scatter(x=df2['ring'], y=df2['pop_per_ring'], name=f'{vuodet[1]} (Väestömäärä)',
+                                mode='lines', line=dict(width=1.5, color='black'),
+                                yaxis="y2"))
+        
+        # Update Axes
+        fig.update_xaxes(range=[1, 15])
         fig.update_layout(margin={"r": 10, "t": 50, "l": 10, "b": 10}, height=500,
-                                legend=dict(
-                                    yanchor="top",
-                                    y=0.97,
-                                    xanchor="right",
-                                    x=0.99
-                                )
-                                )
+                        legend=dict(yanchor="top", y=0.97, xanchor="right", x=0.99))
+
+        # Add a vertical dashed line at x=3
         fig.update_layout(shapes=[
-                            dict(
-                                type= 'line',
-                                yref= 'paper', y0= 0, y1= 1,
-                                xref= 'x', x0= 3, x1= 3,
-                                line=dict(
-                                            color="Black",
-                                            width=0.5,
-                                            dash="dash",
-                                        )
-                                )
-                        ])
+            dict(
+                type='line',
+                yref='paper', y0=0, y1=1,
+                xref='x', x0=3, x1=3,
+                line=dict(color="Black", width=0.5, dash="dash"),
+            )
+        ])
+
         return fig
     fig = plot_muutos(den0,den1)
     return st.plotly_chart(fig, use_container_width=True)
 
+
+
 with den_holder:
+
     generate_den_graphs(den0,den1)
     
 st.caption("data: [stat.fi](https://www.stat.fi/org/avoindata/paikkatietoaineistot/tilastoruudukko_1km.html)")
