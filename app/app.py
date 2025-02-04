@@ -41,7 +41,9 @@ kuntalista = kuntakoodit['kunta'].tolist()
 #st.title(':point_down:')
 st.subheader('Tällä tutkimusappilla voit katsoa, miten seudun väestötiheys on kehittynyt.')
 # kuntavalitsin
-valinnat = st.multiselect('Valitse kunnat (max 7) - kattavuus koko Suomi', kuntalista, default=['Helsinki','Espoo','Vantaa'])
+k1,k2 = st.columns([2,1])
+valinnat = k1.multiselect('Valitse kunnat (max 7) - kattavuus koko Suomi', kuntalista, default=['Helsinki','Espoo','Vantaa'])
+plot_mode = k2.radio('Väestöryhmä',('vaesto','ika_0_14','ika_65_'),horizontal=True)
 st.caption('Ensin valittua käytetään väestögradientin keskipisteenä.')
 vuodet = st.slider('Aseta aikajakso',2010, 2023, (2020, 2023),step=1)
 #st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
@@ -115,21 +117,6 @@ def muutos_h3(kunta_list,y1=2015,y2=2022):
 
     return h3_out
 
-# MAP HERE
-with st.expander('Kasvu kartalla', expanded=False):
-    mapholder = st.empty()
-    k1,k2 = st.columns([1,2])
-    ratio = False #k1.checkbox('Näytä suhteellinen kasvu')
-    plot_mode = k1.radio('Muutosdata',('vaesto','ika_0_14','ika_65_'),horizontal=True)
-    selite = ''' 
-        Heksagonihila muodostuu h3geo.org -kirjaston heksagoneista, joihin on summattu asukasmäärät 
-        kuhunkin heksagoniin osuvien 1x1km väestöruututietojen keskipisteiden mukaan, eli soveltuu vain seudulliseen tarkasteluun.
-        Kartan luokittelu on dynaaminen seudun arvojen ala- ja yläkvarttaalien mukaan:
-        Heksat, joissa muutos on yli kasvun/vähenemän alakvarttaalin on luokiteltu karttumaksi/hiipumaksi ja 
-        heksat, joissa muutos on yli yläkvarttaalien ovat vastaavasti kasvua/taantumaa.
-        '''
-    st.caption(selite)
-
 def binit(df,color_col,bin_labels):
     min1 = df.loc[df[color_col] < 0][color_col].quantile(0.75)
     min2 = df.loc[df[color_col] < 0][color_col].quantile(0.25)
@@ -143,17 +130,11 @@ def binit(df,color_col,bin_labels):
     df_out = df.loc[df['Muutos'] != 'ei muutosta']  #[(df[color_col] < -5) | (df[color_col] > 5)]
     return df_out
 
-def generate_plot_df(df_in,ratio,plot_mode):
-
-    # plot mode
-    if ratio == 1:
-        color_col = f'{plot_mode}suht'
-    else:
-        color_col = plot_mode
+def generate_plot_df(df_in,plot_mode):
     
     #bin it
     bin_labels = ['taantumaa','hiipumaa','ei muutosta','karttumaa','kasvua','top']
-    plot = binit(df_in,color_col,bin_labels)
+    plot = binit(df_in,plot_mode,bin_labels)
     
     #plot_mode
     if plot_mode == 'vaesto':
@@ -208,7 +189,12 @@ def generate_plot_df(df_in,ratio,plot_mode):
 
     return plot, fig, graph_value, value_title
 
-    
+
+
+# MAP HERE
+with st.expander('Kasvu kartalla', expanded=False):
+    mapholder = st.empty()
+    metric_holder = st.container()
 
 #selectors
 if len(valinnat) == 0:
@@ -220,30 +206,39 @@ elif len(valinnat) > 7:
 else:
     # generate regional data
     growth_df = muutos_h3(valinnat, y1=vuodet[0], y2=vuodet[1])
-    plot, fig, graph_value, value_title = generate_plot_df(growth_df,ratio,plot_mode)
+    plot, fig, graph_value, value_title = generate_plot_df(growth_df,plot_mode)
     mapholder.plotly_chart(fig, use_container_width=True)
 
-st.markdown('---')
 
 # metrics
-st.subheader('TOP-kohteiden osuus kasvusta')
+# with metric_holder:
+#     st.markdown('**Valitun väestöryhmän TOP-kohteissa osuus kasvusta**')
 
-def topN_share(df,col,n=4,q=0.9):
-    net_growth = df[col].sum()
-    g_qshare = round(df.loc[df[col] > df[col].quantile(q), col].sum() / df[df[col] > 0][col].sum() * 100, 1)
-    g_share = round((df[df[col] > 0][col].sort_values(ascending = False).head(n).sum()) / (df[df[col] > 0][col].sum())*100,1)
-    return round(net_growth,-1),g_share,g_qshare
+#     def topN_share(df,col,n=4,q=0.9):
+#         net_growth = df[col].sum()
+#         g_qshare = round(df.loc[df[col] > df[col].quantile(q), col].sum() / df[df[col] > 0][col].sum() * 100, 1)
+#         g_share = round((df[df[col] > 0][col].sort_values(ascending = False).head(n).sum()) / (df[df[col] > 0][col].sum())*100,1)
+#         return round(net_growth,-1),g_share,g_qshare
 
-net,net_s,net_q = topN_share(plot,'vaesto')
-lap,lap_s,lap_q = topN_share(plot,'ika_0_14')
-van,van_s,van_q = topN_share(plot,'ika_65_')
+#     net,net_s,net_q = topN_share(plot,'vaesto')
+#     lap,lap_s,lap_q = topN_share(plot,'ika_0_14')
+#     van,van_s,van_q = topN_share(plot,'ika_65_')
 
-m1, m2, m3 = st.columns(3)
-m1.metric(label="Väestökasvu", value=f"{net:.0f}", delta=f"TOP osuus {net_q}%")
-m2.metric(label="Lapsikasvu", value=f"{lap:.0f}", delta=f"TOP osuus {lap_q}%")
-m3.metric(label="Seniorikasvu", value=f"{van:.0f}", delta=f"TOP osuus {van_q}%")
-st.caption('Kasvu on ko. ryhmän nettokasvu, mutta TOP-kohteiden(persentiili) osuus on laskettu vain kasvualueista, ei nettokasvusta.')
-st.markdown('---')
+#     m1, m2, m3 = st.columns(3)
+#     m1.metric(label="Väestökasvu", value=f"{net:.0f}", delta=f"TOP osuus {net_q}%")
+#     m2.metric(label="Lapsikasvu", value=f"{lap:.0f}", delta=f"TOP osuus {lap_q}%")
+#     m3.metric(label="Seniorikasvu", value=f"{van:.0f}", delta=f"TOP osuus {van_q}%")
+#     selite = ''' 
+#         Kasvu on ko. ryhmän nettokasvu, mutta TOP-kohteiden(persentiili) osuus on laskettu vain kasvualueista, ei nettokasvusta. 
+#         Heksagonihila muodostuu h3geo.org -kirjaston heksagoneista, joihin on summattu asukasmäärät 
+#         kuhunkin heksagoniin osuvien 1x1km väestöruututietojen keskipisteiden mukaan, eli soveltuu vain seudulliseen tarkasteluun.
+#         Kartan luokittelu on dynaaminen seudun arvojen ala- ja yläkvarttaalien mukaan:
+#         Heksat, joissa muutos on yli kasvun/vähenemän alakvarttaalin on luokiteltu karttumaksi/hiipumaksi ja 
+#         heksat, joissa muutos on yli yläkvarttaalien ovat vastaavasti kasvua/taantumaa.
+#         '''
+#     st.caption(selite)
+
+#st.markdown('---')
 # graph placeholder
 st.subheader('Väestögradientti')
 den_holder = st.empty()
