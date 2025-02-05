@@ -201,7 +201,7 @@ if len(valinnat) == 0:
     st.warning('Valitse kunnat')
     st.stop()
 elif len(valinnat) > 7:
-    st.warning('max 5')
+    st.warning('max 7')
     st.stop()
 else:
     # generate regional data
@@ -291,7 +291,7 @@ def generate_den_graphs(den0,den1):
 
         fig = go.Figure(
             layout=dict(
-                title=f"Luokan '{value_title}' tiheys (~km² mediaani) & väestömäärä etäisyysvyöhykkeillä",
+                title=f"Luokan '{value_title}' tiheys (~km² mediaani) & väestömäärä etäisyysvyöhykkeillä kohteesta '{valinnat[0]}'",
                 yaxis=dict(
                     title="Tiheys (~km² mediaani)",
                     side="left",
