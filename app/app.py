@@ -45,13 +45,13 @@ k1,k2 = st.columns([2,1])
 valinnat = k1.multiselect('Valitse kunnat (max 7) - kattavuus koko Suomi', kuntalista, default=['Helsinki','Espoo','Vantaa'])
 plot_mode = k2.radio('Väestöryhmä',('vaesto','ika_0_14','ika_65_'),horizontal=True)
 st.caption('Ensin valittua käytetään väestögradientin keskipisteenä.')
-vuodet = st.slider('Aseta aikajakso',2010, 2023, (2020, 2023),step=1)
+vuodet = st.slider('Aseta aikajakso',2010, 2024, (2020, 2024),step=1)
 #st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
 k = st.empty()
 
 #statgrid change
 @st.cache_data()
-def muutos_h3(kunta_list,y1=2015,y2=2022):
+def muutos_h3(kunta_list,y1=2020,y2=2024):
     url = 'http://geo.stat.fi/geoserver/vaestoruutu/wfs'
     wfs11 = WebFeatureService(url=url, version='1.1.0')
     path = Path(__file__).parent / 'data/kunta_dict.csv'
