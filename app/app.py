@@ -338,6 +338,40 @@ def generate_den_graphs(den0,den1):
             )
         ])
 
+        # Add sum values
+        pop_sum_before_3km = (
+            df2[df2['ring'].isin(['1 km', '2 km', '3 km'])]['pop_per_ring'].sum() -
+            df1[df1['ring'].isin(['1 km', '2 km', '3 km'])]['pop_per_ring'].sum()
+        )
+        pop_sum_after_3km = (
+            df2[~df2['ring'].isin(['1 km', '2 km', '3 km'])]['pop_per_ring'].sum() -
+            df1[~df1['ring'].isin(['1 km', '2 km', '3 km'])]['pop_per_ring'].sum()
+        )
+
+        def format_signed(value):
+            sign = "+" if value >= 0 else "-"
+            return f"{sign}{abs(round(value,-1)):,.0f}".replace(",", "\u00A0")
+
+        fig.add_annotation(
+            x=1.95,  # slightly to the left of x=3
+            y=0.03,     # bottom of plot
+            xref='x',
+            yref='paper',
+            text=format_signed(pop_sum_before_3km),
+            showarrow=False,
+            font=dict(color='black')
+        )
+
+        fig.add_annotation(
+            x=5.05,  # slightly to the right of x=3
+            y=0.03,
+            xref='x',
+            yref='paper',
+            text=format_signed(pop_sum_after_3km),
+            showarrow=False,
+            font=dict(color='black')
+        )
+
         return fig
     fig = plot_muutos(den0,den1)
     return st.plotly_chart(fig, use_container_width=True)
