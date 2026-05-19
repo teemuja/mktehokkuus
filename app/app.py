@@ -204,7 +204,7 @@ def generate_plot_df(df_in,plot_mode):
 
 
 # MAP HERE
-with st.expander('Kasvu kartalla', expanded=False):
+with st.container() #st.expander('Kasvu kartalla', expanded=False):
     mapholder = st.empty()
 
 #selectors
