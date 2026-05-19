@@ -3,23 +3,17 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 import h3
-import h3.api.basic_int as h3_api
-import numpy as np
 from pathlib import Path
-from shapely import wkt
-from shapely.geometry import shape, Point
-import json
+from shapely.geometry import mapping, shape
 import geocoder
-from geopandas import points_from_xy
 from owslib.wfs import WebFeatureService
-from owslib.fes import *
+from owslib.fes import PropertyIsLike
 from owslib.etree import etree
 import plotly.express as px
+import plotly.graph_objects as go
 px.set_mapbox_access_token(st.secrets['MAPBOX_TOKEN'])
 mbtoken = st.secrets['MAPBOX_TOKEN']
 my_style = st.secrets['MAPBOX_STYLE']
-import math
-import statistics
 
 st.set_page_config(page_title="Research App", layout="wide", initial_sidebar_state='expanded')
 st.markdown("""
@@ -45,13 +39,12 @@ k1,k2 = st.columns([2,1])
 valinnat = k1.multiselect('Valitse kunnat (max 7) - kattavuus koko Suomi', kuntalista, default=['Helsinki','Espoo','Vantaa'])
 plot_mode = k2.radio('Väestöryhmä',('vaesto','ika_0_14','ika_65_'),horizontal=True)
 st.caption('Ensin valittua käytetään väestögradientin keskipisteenä.')
-vuodet = st.slider('Aseta aikajakso',2010, 2024, (2020, 2024),step=1)
+vuodet = st.slider('Aseta aikajakso',2010, 2025, (2020, 2025),step=1)
 #st.write('<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
-k = st.empty()
 
 #statgrid change
 @st.cache_data()
-def muutos_h3(kunta_list,y1=2020,y2=2024):
+def muutos_h3(kunta_list,y1=2020,y2=2025):
     url = 'http://geo.stat.fi/geoserver/vaestoruutu/wfs'
     wfs11 = WebFeatureService(url=url, version='1.1.0')
     path = Path(__file__).parent / 'data/kunta_dict.csv'
@@ -128,6 +121,7 @@ def binit(df,color_col,bin_labels):
     df = df.sort_values('keep', ascending=False).drop_duplicates(subset=['h3_id'])
     df = df.drop(columns=['keep'])
     df_out = df.loc[df['Muutos'] != 'ei muutosta']  #[(df[color_col] < -5) | (df[color_col] > 5)]
+    df_out['Muutos'] = df_out['Muutos'].cat.remove_unused_categories()
     return df_out
 
 def generate_plot_df(df_in,plot_mode):
@@ -146,6 +140,22 @@ def generate_plot_df(df_in,plot_mode):
     else:
         graph_value = 'van'
         value_title = 'väestö yli 65v'
+
+    plot = plot.reset_index(drop=True)
+    plot['feature_id'] = plot.index.astype(str)
+
+    geojson = {
+        'type': 'FeatureCollection',
+        'features': [
+            {
+                'type': 'Feature',
+                'id': row.feature_id,
+                'properties': {},
+                'geometry': mapping(row.geometry),
+            }
+            for row in plot.itertuples(index=False)
+        ],
+    }
     
     #colors
     bin_colors = {
@@ -156,20 +166,22 @@ def generate_plot_df(df_in,plot_mode):
         'kasvua':'brown',
         'top':'red',
     }
+    muutos_orders = [label for label in bin_labels if label in plot['Muutos'].dropna().unique()]
 
     # plot
     lat = plot.unary_union.centroid.y
     lng = plot.unary_union.centroid.x
     fig = px.choropleth_mapbox(plot,
-                                geojson=plot.geometry,
-                                locations=plot.index,
+                                geojson=geojson,
+                                locations='feature_id',
+                                featureidkey='id',
                                 title=f'Väestötiheyden muutos {vuodet[0]}-{vuodet[1]}, ({value_title})',
                                 color='Muutos',
                                 hover_data=['vaesto','ika_0_14','ika_65_','vaestosuht','ika_0_14suht','ika_65_suht'],
                                 center={"lat": lat, "lon": lng},
                                 mapbox_style=my_style,
                                 color_discrete_map=bin_colors,
-                                category_orders={'Muutos':bin_labels},
+                                category_orders={'Muutos': muutos_orders},
                                 labels={'vaesto':'Muutos','ika_0_14':'Muutos lapset','ika_65_':'Muutos vanh.',
                                         'vaestosuht':'Muutos%','ika_0_14suht':'Muutos% lapset','ika_65_suht':'Muutos% vanh.'
                                         },
@@ -194,7 +206,6 @@ def generate_plot_df(df_in,plot_mode):
 # MAP HERE
 with st.expander('Kasvu kartalla', expanded=False):
     mapholder = st.empty()
-    metric_holder = st.container()
 
 #selectors
 if len(valinnat) == 0:
@@ -208,35 +219,6 @@ else:
     growth_df = muutos_h3(valinnat, y1=vuodet[0], y2=vuodet[1])
     plot, fig, graph_value, value_title = generate_plot_df(growth_df,plot_mode)
     mapholder.plotly_chart(fig, use_container_width=True)
-
-
-# metrics
-# with metric_holder:
-#     st.markdown('**Valitun väestöryhmän TOP-kohteissa osuus kasvusta**')
-
-#     def topN_share(df,col,n=4,q=0.9):
-#         net_growth = df[col].sum()
-#         g_qshare = round(df.loc[df[col] > df[col].quantile(q), col].sum() / df[df[col] > 0][col].sum() * 100, 1)
-#         g_share = round((df[df[col] > 0][col].sort_values(ascending = False).head(n).sum()) / (df[df[col] > 0][col].sum())*100,1)
-#         return round(net_growth,-1),g_share,g_qshare
-
-#     net,net_s,net_q = topN_share(plot,'vaesto')
-#     lap,lap_s,lap_q = topN_share(plot,'ika_0_14')
-#     van,van_s,van_q = topN_share(plot,'ika_65_')
-
-#     m1, m2, m3 = st.columns(3)
-#     m1.metric(label="Väestökasvu", value=f"{net:.0f}", delta=f"TOP osuus {net_q}%")
-#     m2.metric(label="Lapsikasvu", value=f"{lap:.0f}", delta=f"TOP osuus {lap_q}%")
-#     m3.metric(label="Seniorikasvu", value=f"{van:.0f}", delta=f"TOP osuus {van_q}%")
-#     selite = ''' 
-#         Kasvu on ko. ryhmän nettokasvu, mutta TOP-kohteiden(persentiili) osuus on laskettu vain kasvualueista, ei nettokasvusta. 
-#         Heksagonihila muodostuu h3geo.org -kirjaston heksagoneista, joihin on summattu asukasmäärät 
-#         kuhunkin heksagoniin osuvien 1x1km väestöruututietojen keskipisteiden mukaan, eli soveltuu vain seudulliseen tarkasteluun.
-#         Kartan luokittelu on dynaaminen seudun arvojen ala- ja yläkvarttaalien mukaan:
-#         Heksat, joissa muutos on yli kasvun/vähenemän alakvarttaalin on luokiteltu karttumaksi/hiipumaksi ja 
-#         heksat, joissa muutos on yli yläkvarttaalien ovat vastaavasti kasvua/taantumaa.
-#         '''
-#     st.caption(selite)
 
 #st.markdown('---')
 # graph placeholder
@@ -284,7 +266,6 @@ den0['pop_per_ring'] = den0['pop_sum_ring'].diff().fillna(den0['pop_sum_ring'])
 den1['pop_per_ring'] = den1['pop_sum_ring'].diff().fillna(den1['pop_sum_ring'])
 
 # graph plotter
-import plotly.graph_objects as go
 def generate_den_graphs(den0,den1):
     
     def plot_muutos(df1, df2):
