@@ -222,7 +222,7 @@ else:
 
 #st.markdown('---')
 # graph placeholder
-st.subheader('Väestögradientti')
+#st.subheader('Väestögradientti')
 den_holder = st.empty()
 
 def den_grad(df_in,center_add,value,reso=8,rings=7):
@@ -258,12 +258,12 @@ def den_grad(df_in,center_add,value,reso=8,rings=7):
     return grad_df
 
 
-# and density gradients + rings
-den0 = den_grad(df_in=plot,center_add=valinnat[0],value=f'{vuodet[0]}_{graph_value}',reso=8,rings=16)
-den1 = den_grad(df_in=plot,center_add=valinnat[0],value=f'{vuodet[1]}_{graph_value}',reso=8,rings=16)
+# and density gradients + rings ..broken. fix someday...
+#den0 = den_grad(df_in=plot,center_add=valinnat[0],value=f'{vuodet[0]}_{graph_value}',reso=8,rings=16)
+#den1 = den_grad(df_in=plot,center_add=valinnat[0],value=f'{vuodet[1]}_{graph_value}',reso=8,rings=16)
 
-den0['pop_per_ring'] = den0['pop_sum_ring'].diff().fillna(den0['pop_sum_ring'])
-den1['pop_per_ring'] = den1['pop_sum_ring'].diff().fillna(den1['pop_sum_ring'])
+#den0['pop_per_ring'] = den0['pop_sum_ring'].diff().fillna(den0['pop_sum_ring'])
+#den1['pop_per_ring'] = den1['pop_sum_ring'].diff().fillna(den1['pop_sum_ring'])
 
 # graph plotter
 def generate_den_graphs(den0,den1):
@@ -359,9 +359,8 @@ def generate_den_graphs(den0,den1):
 
 
 
-with den_holder:
-
-    generate_den_graphs(den0,den1)
+#with den_holder:
+#    generate_den_graphs(den0,den1)
     
 st.caption("data: [stat.fi](https://www.stat.fi/org/avoindata/paikkatietoaineistot/tilastoruudukko_1km.html)")
 
